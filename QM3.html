@@ -1,0 +1,451 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Skilled Personnel SCADA Matrix</title>
+    <style>
+        :root {
+            --bg-dark: #020617;
+            --panel-bg: #0F172A;
+            --border-glow: #334155;
+            --safe-green: #10B981;
+            --alarm-red: #EF4444;
+            --auto-blue: #3B82F6;
+            --text-light: #E2E8F0;
+        }
+
+        body {
+            font-family: 'Courier New', Courier, monospace;
+            background-color: var(--bg-dark);
+            color: var(--text-light);
+            margin: 0;
+            padding: 20px;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        /* SCADA Top Dashboard Header */
+        .scada-header {
+            border: 2px solid var(--border-glow);
+            background-color: var(--panel-bg);
+            padding: 15px;
+            text-align: center;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        .scada-header h1 { margin: 0; font-size: 24px; color: #38BDF8; letter-spacing: 1px; }
+
+        /* Configuration Ribbon */
+        .global-ribbon {
+            display: flex;
+            justify-content: space-between;
+            background: #1E293B;
+            padding: 15px 25px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-glow);
+            align-items: center;
+        }
+        .btn-risk {
+            background-color: #7F1D1D; color: #FCA5A5; border: 1px solid var(--alarm-red);
+            padding: 10px 16px; font-weight: bold; cursor: pointer; border-radius: 4px;
+        }
+        .btn-risk:hover { background-color: var(--alarm-red); color: white; }
+
+        /* Core Grid Layout */
+        .dashboard-grid {
+            display: grid;
+            grid-template-columns: 1.2fr 0.8fr;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+
+        .panel {
+            background: var(--panel-bg);
+            border: 2px solid var(--border-glow);
+            padding: 20px;
+            border-radius: 8px;
+        }
+
+        /* Native Live Chart Styles */
+        .chart-box {
+            background: #020617;
+            border: 1px solid var(--border-glow);
+            border-radius: 6px;
+            padding: 10px;
+            position: relative;
+        }
+        .chart-legend {
+            display: flex;
+            gap: 20px;
+            font-size: 11px;
+            margin-bottom: 8px;
+            justify-content: center;
+        }
+        .legend-item { display: flex; align-items: center; gap: 5px; }
+
+        /* Interactive Roles Section */
+        .station-tabs {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 10px;
+            margin-top: 15px;
+        }
+        .tab-btn {
+            background: #1E293B; border: 1px solid var(--border-glow); color: var(--text-light);
+            padding: 10px; font-family: inherit; cursor: pointer; font-weight: bold; border-radius: 4px;
+        }
+        .tab-btn.active { background: #1E3A8A; border-color: var(--auto-blue); color: #38BDF8; }
+
+        /* Status Flags & Directives */
+        .banner { padding: 12px; border-radius: 4px; font-size: 12px; font-weight: bold; margin: 15px 0; border-left: 6px solid; }
+        .b-green { background: rgba(16, 185, 129, 0.1); border-left-color: var(--safe-green); color: #A7F3D0; }
+        .b-red { background: rgba(239, 68, 68, 0.15); border-left-color: var(--alarm-red); color: #FCA5A5; animation: flash 1s infinite; }
+        .b-blue { background: rgba(59, 130, 246, 0.1); border-left-color: var(--auto-blue); color: #BFDBFE; }
+        
+        @keyframes flash { 50% { border-left-color: transparent; } }
+
+        /* Form Controls */
+        .input-block { background: #1E293B; padding: 15px; border-radius: 6px; border: 1px solid var(--border-glow); margin-top: 15px; }
+        .input-block h4 { margin: 0 0 10px 0; font-size: 14px; color: #38BDF8; }
+        .fields-row { display: flex; gap: 15px; align-items: center; margin-bottom: 10px; }
+        .fields-row input { background: #020617; color: #38BDF8; border: 1px solid var(--border-glow); padding: 8px; border-radius: 4px; width: 100px; font-family: inherit; font-size: 14px; }
+        .btn-log { background: #0284C7; color: white; border: none; padding: 10px; width: 100%; border-radius: 4px; font-family: inherit; font-weight: bold; cursor: pointer; }
+        .btn-log:hover { background: #0369A1; }
+
+        /* History Ledger Table */
+        .ledger-box { background: var(--panel-bg); border: 2px solid var(--border-glow); padding: 20px; border-radius: 8px; }
+        .ledger-box h3 { margin: 0 0 12px 0; font-size: 16px; color: #38BDF8; display: flex; justify-content: space-between; }
+        .table-wrapper { max-height: 180px; overflow-y: auto; border: 1px solid var(--border-glow); }
+        table { width: 100%; border-collapse: collapse; text-align: left; font-size: 12px; }
+        th { background: #1E293B; padding: 10px; color: #94A3B8; position: sticky; top: 0; }
+        td { padding: 8px 10px; border-bottom: 1px solid var(--border-glow); }
+        tr:nth-child(even) { background: #090D16; }
+
+        .disabled { opacity: 0.2; pointer-events: none; }
+        .hide { display: none; }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="scada-header">
+        <h1>REAL-TIME MULTI-PARAMETRIC RESOURCE CONTROL MATRIX</h1>
+        <div style="font-size: 11px; color: #64748B; margin-top: 4px;">INTEGRATED SCADA INTERFACE FOR SKILLED OPERATORS</div>
+    </div>
+
+    <div class="global-ribbon">
+        <div>
+            <input type="checkbox" id="autoToggle" style="transform: scale(1.3); margin-right: 8px; cursor: pointer;">
+            <label for="autoToggle" style="font-weight: bold; color: #CBD5E1; cursor: pointer;">🤖 ENGAGE CLOSED-LOOP AUTOMATED TUNING SYSTEM</label>
+        </div>
+        <button class="btn-risk" onclick="triggerSystemAnomaly()">⚡ INJECT OUT-OF-RANGE DEVIATION</button>
+    </div>
+
+    <div class="dashboard-grid">
+        <div class="panel">
+            <h3>📈 Live Parameter Tracking Feed</h3>
+            <div class="chart-legend">
+                <div class="legend-item"><span style="width:12px; height:3px; background:#EF4444; display:inline-block;"></span> HACCP Temp</div>
+                <div class="legend-item"><span style="width:12px; height:3px; background:#10B981; display:inline-block;"></span> QC Acidity (pH)</div>
+                <div class="legend-item"><span style="width:12px; height:3px; background:#3B82F6; display:inline-block;"></span> Process Eng Temp</div>
+            </div>
+            <div class="chart-box">
+                <svg id="liveSvgChart" width="100%" height="240" style="background:#020617; overflow:visible;"></svg>
+            </div>
+
+            <div class="station-tabs">
+                <button class="tab-btn active" id="tab-haccp" onclick="switchStation('haccp')">🛡️ 01: HACCP MANAGER</button>
+                <button class="tab-btn" id="tab-qc" onclick="switchStation('qc')">🔬 02: QC MANAGER</button>
+                <button class="tab-btn" id="tab-eng" onclick="switchStation('eng')">⚙️ 03: PROCESS ENGINEER</button>
+            </div>
+        </div>
+
+        <div class="panel" style="display:flex; flex-direction:column; justify-content:space-between;">
+            <div>
+                <h3 id="consoleTitle">🛡️ HACCP Command Post</h3>
+                <div id="statusBanner" class="banner b-green">🟢 RUNTIME NOMINAL</div>
+                <div id="directiveMsg" style="font-size: 13px; line-height: 1.5; min-height: 120px;">
+                    System evaluating operational boundaries...
+                </div>
+            </div>
+
+            <div class="input-block" id="manualInterventionBox">
+                <h4 id="inputTitle">Log Manual Compensation</h4>
+                <div class="fields-row">
+                    <label id="inputLabel" style="font-size:12px; color:#94A3B8;">Target:</label>
+                    <input type="number" id="manualTargetInput" value="90.0" step="0.1">
+                    <span id="unitSpan">°C</span>
+                </div>
+                <div style="display:flex; align-items:center; gap:8px; margin-bottom:12px; font-size:11px; color:#CBD5E1;">
+                    <input type="checkbox" id="verifyCheck" style="cursor:pointer;">
+                    <label for="verifyCheck" style="cursor:pointer;">Confirm validation strategy alignment</label>
+                </div>
+                <button class="btn-log" onclick="submitManualCorrection()">🔧 Log Action Protocol & Reset</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="ledger-box">
+        <h3>
+            <span>📋 Real-Time Factory Process Log History</span>
+            <span style="font-size:11px; color:#64748B;">SYSTEM STATUS SECURE</span>
+        </h3>
+        <div class="table-wrapper">
+            <table>
+                <thead>
+                    <tr>
+                        <th width="15%">Timestamp</th>
+                        <th width="18%">Assigned Personnel</th>
+                        <th width="15%">Param Value</th>
+                        <th width="15%">Status</th>
+                        <th width="37%">Interlock Correction Action Taken</th>
+                    </tr>
+                </thead>
+                <tbody id="logTableBody">
+                    </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+
+<script>
+    // System Master Operational Threshold States
+    let masterData = {
+        haccp: { val: 90.0, min: 85.0, max: 95.0, name: "HACCP Manager", units: "°C" },
+        qc: { val: 4.60, min: 4.40, max: 4.80, name: "QC Manager", units: "pH" },
+        eng: { val: 43.5, min: 42.0, max: 45.0, name: "Process Engineer", units: "°C" }
+    };
+
+    let activeStation = 'haccp';
+    let autoPilot = false;
+
+    // Data History buffers tracking vectors for native graph drawing (30 coordinates)
+    let graphHistory = Array.from({length: 30}, () => ({ haccp: 90.0, qc: 4.60, eng: 43.5 }));
+
+    function switchStation(station) {
+        activeStation = station;
+        document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+        document.getElementById(`tab-${station}`).classList.add('active');
+        
+        let meta = masterData[station];
+        document.getElementById('consoleTitle').innerText = `${station === 'haccp' ? '🛡️' : station === 'qc' ? '🔬' : '⚙️'} ${meta.name} Command Post`;
+        document.getElementById('inputTitle').innerText = `Log Manual Compensation (${meta.name})`;
+        document.getElementById('inputLabel').innerText = `Enter Value (${meta.units}):`;
+        document.getElementById('manualTargetInput').value = meta.val.toFixed(1);
+        document.getElementById('unitSpan').innerText = meta.meta;
+        
+        evaluateDiagnostics();
+    }
+
+    function triggerSystemAnomaly() {
+        // Force dramatic out-of-range limits
+        masterData.haccp.val = 112.0; // High
+        masterData.qc.val = 3.80;    // Low
+        masterData.eng.val = 54.0;   // High
+        evaluateDiagnostics();
+    }
+
+    function submitManualCorrection() {
+        if(autoPilot) return;
+        if(!document.getElementById('verifyCheck').checked) {
+            alert("⚠️ CRITICAL SECURITY BLOCKED: Verification checkbox required before dispatching parameters.");
+            return;
+        }
+
+        let enteredVal = parseFloat(document.getElementById('manualTargetInput').value);
+        let currentMeta = masterData[activeStation];
+        masterData[activeStation].val = enteredVal;
+        
+        document.getElementById('verifyCheck').checked = false; // reset
+        
+        // Push an instant tracking confirmation straight to the historical ledger
+        appendLogRecord(currentMeta.name, enteredVal, "NOMINAL MANUAL", "Operator overridden manual correction alignment deployed. Calibration stabilized successfully.");
+        evaluateDiagnostics();
+    }
+
+    // Main SCADA Real-Time Clock Loop Ticking Every 1000ms
+    setInterval(() => {
+        // 1. Process automated closed-loop feedback correction step adjustments
+        if (autoPilot) {
+            Object.keys(masterData).forEach(key => {
+                let m = masterData[key];
+                if (m.val > m.max) m.val -= (m.val - ((m.max + m.min)/2)) * 0.25;
+                if (m.val < m.min) m.val += (((m.max + m.min)/2) - m.val) * 0.25;
+            });
+        } else {
+            // Add slight standard realistic signal jitter noise to normal metrics
+            Object.keys(masterData).forEach(key => {
+                let m = masterData[key];
+                if(m.val >= m.min && m.val <= m.max) {
+                    m.val += (Math.random() - 0.5) * (key === 'qc' ? 0.02 : 0.3);
+                }
+            });
+        }
+
+        // 2. Append values to rolling graph vector array history buffer
+        graphHistory.shift();
+        graphHistory.push({ haccp: masterData.haccp.val, qc: masterData.qc.val, eng: masterData.eng.val });
+        
+        // 3. Render calculations
+        drawNativeVectorChart();
+        evaluateDiagnostics();
+    }, 1000);
+
+    // --- Dynamic Diagnostics Evaluation Logic ---
+    function evaluateDiagnostics() {
+        let haccpMeta = masterData.haccp;
+        let qcMeta = masterData.qc;
+        let engMeta = masterData.eng;
+
+        let hSafe = (haccpMeta.val >= haccpMeta.min && haccpMeta.val <= haccpMeta.max);
+        let qSafe = (qcMeta.val >= qcMeta.min && qcMeta.val <= qcMeta.max);
+        let eSafe = (engMeta.val >= engMeta.min && engMeta.val <= engMeta.max);
+
+        // Track global systems status flags
+        let systemFaultPresent = (!hSafe || !qSafe || !eSafe);
+        
+        // Automated Toggle Visual Locks
+        document.getElementById('manualInterventionBox').classList.toggle('disabled', autoPilot);
+
+        // Extract parameters specific to active selected layout tab view
+        let targetMeta = masterData[activeStation];
+        let banner = document.getElementById('statusBanner');
+        let directive = document.getElementById('directiveMsg');
+
+        // Check active specific bounds
+        let isCurrentSafe = (targetMeta.val >= targetMeta.min && targetMeta.val <= targetMeta.max);
+
+        if (isCurrentSafe) {
+            banner.className = "banner b-green";
+            banner.innerText = "🟢 SYSTEM STATUS: NOMINAL";
+            directive.innerHTML = `<b>Live Reading:</b> ${targetMeta.val.toFixed(2)}${targetMeta.units}<br><br><b>SCADA Analytics:</b> Parameters are functioning within planned boundaries. Telemetry infrastructure normal. No tactical mitigation interventions necessary.`;
+        } else if (autoPilot) {
+            banner.className = "banner b-blue";
+            banner.innerText = "🔵 STATUS: CLOSED-LOOP INTERLOCK ACTIVE";
+            directive.innerHTML = `<b>Live Reading:</b> ${targetMeta.val.toFixed(2)}${targetMeta.units}<br><br><b>Automated Correction:</b> Closed-loop sensor network detected a critical limit breach. Feedback logic bypassed manual command and is stepping parameter boundaries back to optimized limits dynamically.`;
+        } else {
+            // TRIGGER ERROR DIRECTIVES BASED ON CRITICAL CRITERIA AND VALUE DIRECTIONS
+            banner.className = "banner b-red";
+            let isUnderRun = (targetMeta.val < targetMeta.min);
+            banner.innerText = `🚨 ALARM: ${isUnderRun ? 'UNDER-RUN THRESHOLD' : 'OVER-RUN THRESHOLD'} BREACH`;
+
+            let actionText = "";
+            
+            if (activeStation === 'haccp') {
+                if (isUnderRun) {
+                    actionText = `<b>⚠️ RISK DETECTED (TOO LOW):</b> Unpasteurized product profile risk! Pathogenic organism hazards may survive process streams.<br><br><b>🚨 STEP-BY-STEP MITIGATION:</b><br>1. Dispatched Personnel: <b>${haccpMeta.name}</b><br>2. Immediately flag automatic data logger interlocks.<br>3. Engage pipeline flow diversion valve loop to isolate raw batch product until temperature hits >=85.0°C.`;
+                    appendLogRecord(haccpMeta.name, haccpMeta.val, "CRITICAL LOW", "Pasteurization limit under-run. Flow diversion valve interlock tripped.");
+                } else {
+                    actionText = `<b>⚠️ RISK DETECTED (TOO HIGH):</b> Operational heat over-processing! Thermal destruction of product quality structures occurring.<br><br><b>🚨 STEP-BY-STEP MITIGATION:</b><br>1. Dispatched Personnel: <b>${haccpMeta.name}</b><br>2. Manually drop burner fuel flow inputs or access auxiliary thermal dump valves.<br>3. Lower temperature inside safe 85.0°C - 95.0°C bands to preserve continuous safety criteria.`;
+                    appendLogRecord(haccpMeta.name, haccpMeta.val, "CRITICAL HIGH", "Pasteurization limit over-run. Steam pressure reduction commanded.");
+                }
+            } 
+            else if (activeStation === 'qc') {
+                if (isUnderRun) {
+                    actionText = `<b>⚠️ RISK DETECTED (TOO LOW / HYPER-ACIDIC):</b> Over-acidification failure! Lactic culture has expanded past quality limits causing milk matrix separation.<br><br><b>🚨 STEP-BY-STEP MITIGATION:</b><br>1. Dispatched Personnel: <b>${qcMeta.name}</b><br>2. Bypass slow standard logs. Run rapid bench titration chemical analysis verification.<br>3. Chill vat lines manually below 10°C to put culture growth into absolute stasis.`;
+                    appendLogRecord(qcMeta.name, qcMeta.val, "QUALITY LOW", "Fermentation hyper-acidic spike. Secondary cooling system forced online.");
+                } else {
+                    actionText = `<b>⚠️ RISK DETECTED (TOO HIGH / UN-ACIDIFIED):</b> Slow culture growth. Risk of microbial stagnation or batch spoilage due to delayed acidification.<br><br><b>🚨 STEP-BY-STEP MITIGATION:</b><br>1. Dispatched Personnel: <b>${qcMeta.name}</b><br>2. Audit tank environment stability charts immediately.<br>3. Verify culture inoculation metrics manually and evaluate secondary culture matrix additions if parameter fails to cross < 4.8 pH.`;
+                    appendLogRecord(qcMeta.name, qcMeta.val, "QUALITY HIGH", "Fermentation failure to acidify. Culture activation audit initiated.");
+                }
+            } 
+            else if (activeStation === 'eng') {
+                if (isUnderRun) {
+                    actionText = `<b>⚠️ RISK DETECTED (TOO LOW):</b> Thermal loop failure. System heat recycling matrix is dropping in recovery efficiency, draining factory grid utilities.<br><br><b>🚨 STEP-BY-STEP MITIGATION:</b><br>1. Dispatched Personnel: <b>${engMeta.name}</b><br>2. Manually audit steam valve infrastructure configurations.<br>3. Tighten thermal balance control line pathways to reclaim lost utility balances and return energy profiles back to spec.`;
+                    appendLogRecord(engMeta.name, engMeta.val, "ENERGY LOW", "Heat exchanger under-temperature. Manual loop throttle adjustment.");
+                } else {
+                    actionText = `<b>⚠️ RISK DETECTED (TOO HIGH):</b> Severe thermal loops component overrun! Risk of mechanical overheating or structural seal breakdown.<br><br><b>🚨 STEP-BY-STEP MITIGATION:</b><br>1. Dispatched Personnel: <b>${engMeta.name}</b><br>2. Manually bypass main heat transfer fluid pumps.<br>3. Open loop venting gate configurations to lower environmental thermal stresses across plant floor infrastructure.`;
+                    appendLogRecord(engMeta.name, engMeta.val, "ENERGY HIGH", "Facility thermal overrun alarm. Exhaust relief gate manual override.");
+                }
+            }
+
+            directive.innerHTML = actionText;
+        }
+    }
+
+    // --- Core Logging Function ---
+    function appendLogRecord(personnel, val, status, action) {
+        let tBody = document.getElementById('logTableBody');
+        let timestamp = new Date().toLocaleTimeString();
+        
+        let row = document.createElement('tr');
+        row.innerHTML = `
+            <td>[${timestamp}]</td>
+            <td style="color:#38BDF8; font-weight:bold;">${personnel}</td>
+            <td>${val.toFixed(2)}</td>
+            <td style="color:${status.includes('NOMINAL') ? 'var(--safe-green)' : 'var(--alarm-red)'}">${status}</td>
+            <td style="font-size:11px; color:#CBD5E1;">${action}</td>
+        `;
+        tBody.insertBefore(row, tBody.firstChild); // Insert newest at top
+    }
+
+    // --- Native SVG Graphics Engine Drawing Chart Natively ---
+    function drawNativeVectorChart() {
+        const svg = document.getElementById('liveSvgChart');
+        svg.innerHTML = ''; // Clear previous frame coordinates
+        
+        let width = svg.getBoundingClientRect().width || 750;
+        let height = 240;
+
+        // Draw internal status grid guidelines
+        for (let i = 1; i < 4; i++) {
+            let yGrid = (height / 4) * i;
+            let line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+            line.setAttribute("x1", "0"); line.setAttribute("y1", yGrid);
+            line.setAttribute("x2", width); line.setAttribute("y2", yGrid);
+            line.setAttribute("stroke", "#1E293B"); line.setAttribute("stroke-dasharray", "4,4");
+            svg.appendChild(line);
+        }
+
+        let hPoints = [], qPoints = [], ePoints = [];
+
+        // Map values into graphical coordinate bounds
+        for (let i = 0; i < graphHistory.length; i++) {
+            let x = (width / (graphHistory.length - 1)) * i;
+            
+            // HACCP mapping (range 60 to 120 maps onto canvas height)
+            let yH = height - (((graphHistory[i].haccp - 60) / 60) * height);
+            hPoints.push(`${x},${yH}`);
+
+            // QC mapping (range 3.0 to 6.0)
+            let yQ = height - (((graphHistory[i].qc - 3.0) / 3.0) * height);
+            qPoints.push(`${x},${yQ}`);
+
+            // Engineering mapping (range 30 to 60)
+            let yE = height - (((graphHistory[i].eng - 30) / 30) * height);
+            ePoints.push(`${x},${yE}`);
+        }
+
+        // Generate and append SVG polyline tracks
+        appendSvgPolyline(svg, hPoints.join(" "), "#EF4444");
+        appendSvgPolyline(svg, qPoints.join(" "), "#10B981");
+        appendSvgPolyline(svg, ePoints.join(" "), "#3B82F6");
+    }
+
+    function appendSvgPolyline(svg, pointsStr, color) {
+        let polyline = document.createElementNS("http://www.w3.org/2000/svg", "polyline");
+        polyline.setAttribute("fill", "none");
+        polyline.setAttribute("stroke", color);
+        polyline.setAttribute("stroke-width", "2.5");
+        polyline.setAttribute("points", pointsStr);
+        svg.appendChild(polyline);
+    }
+
+    // Toggle Automation Monitor state
+    document.getElementById('autoToggle').addEventListener('change', (e) => {
+        autoPilot = e.target.checked;
+        evaluateDiagnostics();
+    });
+
+    // Bootup initialize
+    switchStation('haccp');
+    drawNativeVectorChart();
+</script>
+
+</body>
+</html>
